@@ -1,14 +1,16 @@
 package eg;
 
-import org.osgi.framework.Constants;
+import org.osgi.framework.*;
 import org.apache.felix.framework.Felix;
-import org.apache.felix.main.AutoActivator;
 import org.apache.felix.framework.util.StringMap;
+import org.apache.felix.main.AutoActivator;
+
+import java.io.*;
 import java.util.*;
 
 public class OSGiRuntime {
 
-	final Felix runtime;
+	private final Felix runtime;
 
 	public OSGiRuntime() throws Exception {
 		Map config = new StringMap(false);
@@ -17,26 +19,29 @@ public class OSGiRuntime {
 				"org.osgi.service.packageadmin; version=1.2.0," +
 				"org.osgi.service.startlevel; version=1.0.0," +
 				"org.osgi.service.url; version=1.0.0");
-		configMap.put(AutoActivator.AUTO_START_PROP + ".1",
+		config.put(AutoActivator.AUTO_START_PROP + ".1",
 				"file:bundle/org.apache.felix.shell-1.0.0.jar " +
 				"file:bundle/org.apache.felix.shell.tui-1.0.0.jar");
-		configMap.put(BundleCache.CACHE_PROFILE_DIR_PROP, "cache");
-		configMap.put("felix.embedded.execution", "true");
+		config.put("felix.embedded.execution", "true");
 
-		List list = new ArrayList();
-		list.add(new AutoActivator(configMap));
-		list.add(new RunBundlesActivator());
-
-		runtime = new Felix(configMap, list);
+		runtime = new Felix(config);
 		runtime.start();
 	}
 
-	public void loadBundleFile(String location) {
-
+	public Bundle loadBundleFile(String location) throws Exception {
+		File file = new File(location).getCanonicalFile();
+		if(!file.exists()) throw new FileNotFoundException("Could not find bundle file at " + file);
+		BundleContext context = runtime.getBundleContext();
+		if(context != null) {
+			return context.installBundle("file://" + file);
+		} else {
+			return null;
+		}
 	}
 
 	public void stop() throws Exception {
-		runtime.stopAndWait();
+		runtime.stop();
+		runtime.waitForStop(60L * 1000L);
 	}
 
 }
