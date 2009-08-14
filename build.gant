@@ -46,7 +46,11 @@ target(run:"Runs the driver") {
 
 target(compileShared: 'Compiles the shared code (interface)') {
 	depends(init)
-	javac(srcDir:dir.sharedSrc, destDir:dir.sharedClasses)
+	javac(srcDir:dir.sharedSrc, destDir:dir.sharedClasses) {
+		classpath {
+			fileset(dir:dir.osgiLib, includes:'**/*.jar')
+		}
+	}
 }
 
 target(compileDriver: 'Compiles the driver') {
