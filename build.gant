@@ -1,0 +1,54 @@
+def dir = [:]
+dir.src = new File('.', 'src')
+dir.work = new File('.', 'working')
+dir.classes = new File(dir.work, 'classes')
+dir.lib = new File('.', 'lib')
+
+def types = [
+	'main', 'java'
+]
+types.each {
+	dir["${it}Src"] = new File(dir.src, it)
+	dir["${it}Classes"] = new File(dir.classes, it)
+	dir["${it}Lib"] = new File(dir.lib, it)
+}
+
+dir.osgiLib = new File(dir.lib, 'osgi')
+dir.osgiImpl = new File(dir.osgiLib, 'felix/felix-1.8.0/bin')
+dir.osgiWork = new File(dir.osgiImpl, '..')
+dir.impls = new File(dir.work, 'impls')
+
+dir.each { k,v -> dir[k] = v.canonicalPath }
+
+def file = [:]
+
+file.osgiJar = new File(dir.osgiImpl, 'felix.jar')
+
+file.each { k,v -> file[k] = v.canonicalPath }
+
+target(compileDriver: 'Compiles the driver') {
+	depends(init)
+	javac(srcdir:dir.mainSrc, destDir:dir.mainClasses) {
+		classpath {
+			fileset(dir:dir.osgiLib, includes:'**/*.jar')
+			fileset(dir:dir.mainLib, includes:'**/*.jar') 
+		}
+	}
+}
+
+target(init: 'Initializes the build') {
+	dir.each { k,v ->
+		mkdir(dir:v)
+	}
+}
+
+target(clean: 'Wipes out the compiled implementations and classes') {
+	def deleteDirKeys = ['impls', 'classes']
+	delete(failOnError:false, includeEmptyDirs:true) {
+		deleteDirKeys.each {
+			fileset(dir:dir[it], includes:'**/*')
+		}
+	}
+}
+
+setDefaultTarget(init)

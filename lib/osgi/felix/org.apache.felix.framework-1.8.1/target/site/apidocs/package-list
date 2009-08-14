@@ -1,0 +1,11 @@
+org.apache.felix.framework
+org.apache.felix.framework.cache
+org.apache.felix.framework.ext
+org.apache.felix.framework.searchpolicy
+org.apache.felix.framework.util
+org.apache.felix.framework.util.ldap
+org.apache.felix.framework.util.manifestparser
+org.apache.felix.moduleloader
+org.osgi.framework
+org.osgi.framework.hooks.service
+org.osgi.framework.launch
