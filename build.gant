@@ -1,6 +1,7 @@
 def types = [
 	'main', 'shared', 
-	'java'
+	'java', 'scala', 'jruby',
+	'groovy17', 'groovy16'
 ]
 
 def dir = [:]
@@ -22,15 +23,31 @@ dir.each { k,v -> dir[k] = v.canonicalPath }
 def file = [:]
 file.osgiJar = new File(dir.osgiImpl, 'felix.jar')
 types.each {
-	file["${it}Manifest"] = new File(dir["${it}Src"], 'MANIFEST.MF')
 	file["${it}ImplJar"] = new File(dir.impls, "$it-impl.jar")
 }
+file.sharedManifest = new File(dir.sharedSrc, 'MANIFEST.MF')
 file.sharedImplJar = new File(dir.work, 'api.jar') // Overwrite: shouldn't be in impl dir
 file.each { k,v -> file[k] = v.canonicalPath }
 
 includeTargets << gant.targets.Clean
 cleanDirectory << dir.work
 cleanDirectory << 'felix-cache'
+
+target(initScala: "Steps to initialize Scala") {
+	ant.taskdef(resource:"scala/tools/ant/antlib.xml") {
+		classpath {
+			fileset(dir:dir.scalaLib, includes:'**/*.jar')
+		}
+	}
+}
+
+def initGroovy = { version ->
+	ant.taskdef(name:"${version}c", classname:'org.codehaus.groovy.ant.Groovyc') {
+		classpath {
+			fileset(dir:dir["${version}Lib"], includes:'**/*.jar')
+		}
+	}
+}
 
 target(run:"Runs the driver") {
 	depends(init, compileDriver, compileShared, compileImpls)
@@ -53,13 +70,67 @@ target(compileImpls: 'Compiles all the implementations') {
 	depends(compileJava)
 }
 
+def packageTemplate = { kind ->
+	ant."${kind}c"(srcDir:dir["${kind}Src"], destDir:dir["${kind}Classes"]) {
+		classpath {
+			pathelement(location:file.sharedImplJar)
+			fileset(dir:dir.osgiLib, includes:'**/*.jar')
+		}
+	}
+
+	def cp = ['.'] + (new File(dir["${kind}Lib"]).listFiles() ?: [])
+	def activatorClassName = kind[0].toUpperCase() + kind[1..-1] + "HelloWorldBundle"
+
+	def implJar = file["${kind}ImplJar"]
+	ant.delete(file:implJar, failOnError:false)
+	ant.jar(
+		destFile:implJar, 
+		whenManifestOnly:'fail', compress:true, level:9, index:true
+	) {
+		fileset(dir:dir["${kind}Classes"])
+		fileset(dir:dir["${kind}Lib"], includes:'**/*.jar')
+		manifest {
+			[
+				'Bundle-ManifestVersion': '2',
+				'Bundle-SymbolicName': "eg.impl.${kind}",
+				'Bundle-Vendor': 'Smokejumper IT Consulting',
+				'Bundle-Version': '1',
+				'Bundle-Activator': "eg.impl.${kind}.${activatorClassName}",
+				'Bundle-Classpath': cp.join(','),
+				'Import-Package': 'org.osgi.framework, eg.api, eg.api.osgi.helpers',
+				'Export-Package': "eg.impl.$kind"
+			].each { k,v -> 
+				attribute(name:k, value:v) 
+			}
+		}
+	}
+}
+
+target(compileJava: 'Compiles the Java implementation') {
+	depends(init, compileShared)
+	packageTemplate('java')
+}
+
+target(compileGroovy17: 'Compiles the Groovy 1.7 implementation') {
+	depends(init, compileShared)
+	doInitGroovy('groovy17')
+	packageTemplate('groovy17')
+}
+
+target(compileGroovy16: 'Compiles the Groovy 1.6 implementation') {
+	depends(init, compileShared)
+	doInitGroovy('groovy16')
+	packageTemplate('groovy16')
+}
+
+/*
 target(compileJava: 'Compiles the Java implementation') {
 	javac(srcDir:dir.javaSrc, destDir:dir.javaClasses) {
 		classpath {
 			['java', 'shared'].each {
 				pathelement(location:dir["${it}Classes"])
 			}
-			fileset(dir:dir.osgiLib, includes:'**/*.jar')
+			fileset(dir:dir.osgiLib, includes:** /*.jar')
 		}
 	}
 	delete(file:file.javaImplJar, failOnError:false)
@@ -71,6 +142,7 @@ target(compileJava: 'Compiles the Java implementation') {
 		fileset(dir:dir.javaClasses)
 	}
 }
+*/
 
 target(compileShared: 'Compiles the shared code (interface)') {
 	depends(init)
@@ -103,6 +175,7 @@ target(init: 'Initializes the build') {
 	dir.each { k,v ->
 		mkdir(dir:v)
 	}
+	
 }
 
 setDefaultTarget(run)

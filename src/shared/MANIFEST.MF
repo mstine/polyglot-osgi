@@ -1,0 +1,8 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-SymbolicName: eg.api
+Bundle-Vendor: Smokejumper IT Consulting
+Bundle-Version: 1
+Bundle-Classpath: .
+Import-Package: org.osgi.framework
+Export-Package: eg.api, eg.api.osgi.helpers
