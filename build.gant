@@ -5,7 +5,7 @@ dir.classes = new File(dir.work, 'classes')
 dir.lib = new File('.', 'lib')
 
 def types = [
-	'main', 'java'
+	'main', 'java', 'shared'
 ]
 types.each {
 	dir["${it}Src"] = new File(dir.src, it)
@@ -26,26 +26,35 @@ file.osgiJar = new File(dir.osgiImpl, 'felix.jar')
 
 file.each { k,v -> file[k] = v.canonicalPath }
 
+includeTargets << gant.targets.Clean
+cleanDirectory << dir.work
+cleanDirectory << 'felix-cache'
+
 target(run:"Runs the driver") {
 	depends(init,compileDriver)
-	assert(new File(dir.mainClasses, 'eg/Driver.class').exists())
 	java(classname:"eg.Driver", fork:true) {
 		classpath {
-			['osgiLib', 'impls', 'mainClasses', 'mainLib'].each {
+			['sharedClasses', 'mainClasses'].each {
 				pathelement(location:dir[it])
-				fileset(dir:dir[it]) {
-					include(name:'**/*.jar')
-				}
+			}
+			['osgiLib', 'impls', 'mainLib'].each {
+				fileset(dir:dir[it], includes:'**/*.jar')
 			}
 		}
 	}
 }
 
-target(compileDriver: 'Compiles the driver') {
+target(compileShared: 'Compiles the shared code (interface)') {
 	depends(init)
+	javac(srcDir:dir.sharedSrc, destDir:dir.sharedClasses)
+}
+
+target(compileDriver: 'Compiles the driver') {
+	depends(init, compileShared)
 	javac(srcdir:dir.mainSrc, destDir:dir.mainClasses) {
 		classpath {
-			['osgi', 'main'].each {
+			pathelement(location:dir.sharedClasses)
+			['osgi', 'main',].each {
 				fileset(dir:dir["${it}Lib"], includes:'**/*.jar')
 			}
 		}
@@ -55,15 +64,6 @@ target(compileDriver: 'Compiles the driver') {
 target(init: 'Initializes the build') {
 	dir.each { k,v ->
 		mkdir(dir:v)
-	}
-}
-
-target(clean: 'Wipes out the compiled implementations and classes') {
-	def deleteDirKeys = ['impls', 'classes']
-	delete(failOnError:false, includeEmptyDirs:true) {
-		deleteDirKeys.each {
-			fileset(dir:dir[it], includes:'**/*')
-		}
 	}
 }
 

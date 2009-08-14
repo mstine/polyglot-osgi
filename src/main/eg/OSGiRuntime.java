@@ -1,6 +1,8 @@
 package eg;
 
 import org.osgi.framework.*;
+import org.osgi.util.tracker.ServiceTracker;
+import org.osgi.util.tracker.ServiceTrackerCustomizer;
 import org.apache.felix.framework.Felix;
 import org.apache.felix.framework.util.StringMap;
 import org.apache.felix.main.AutoActivator;
@@ -11,6 +13,7 @@ import java.util.*;
 public class OSGiRuntime {
 
 	private final Felix runtime;
+	private final List<ServiceTracker> serviceTrackers = new ArrayList<ServiceTracker>(8);
 
 	public OSGiRuntime() throws Exception {
 		Map config = new StringMap(false);
@@ -28,6 +31,25 @@ public class OSGiRuntime {
 		runtime.start();
 	}
 
+	public <M> ServiceProvider<M> trackService(Class<M> cls) {
+		BundleContext context = runtime.getBundleContext();
+		if(context != null) {
+			ServiceTrackerCustomizer handler = new ServiceTrackerCustomizer() {
+				public Object addingService(ServiceReference reference) { return reference; }
+
+				public void modifiedService(ServiceReference reference, Object service) {}
+
+				public void removedService(ServiceReference reference, Object service) {}
+			};
+			ServiceTracker it = new ServiceTracker(runtime.getBundleContext(), cls.getName(), handler);
+			it.open();
+			serviceTrackers.add(it);
+			return new ServiceProvider<M>(cls, it);
+		} else {
+			return null;
+		}
+	}
+
 	public Bundle loadBundleFile(String location) throws Exception {
 		File file = new File(location).getCanonicalFile();
 		if(!file.exists()) throw new FileNotFoundException("Could not find bundle file at " + file);
@@ -40,6 +62,9 @@ public class OSGiRuntime {
 	}
 
 	public void stop() throws Exception {
+		for(ServiceTracker it : serviceTrackers) {
+			it.close();
+		}
 		runtime.stop();
 		runtime.waitForStop(60L * 1000L);
 	}
