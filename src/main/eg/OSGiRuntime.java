@@ -31,20 +31,20 @@ public class OSGiRuntime {
 		runtime.start();
 	}
 
-	public <M> ServiceProvider<M> trackService(Class<M> cls) {
-		BundleContext context = runtime.getBundleContext();
+	public ServiceProvider trackService(String cls) {
+		final BundleContext context = runtime.getBundleContext();
 		if(context != null) {
 			ServiceTrackerCustomizer handler = new ServiceTrackerCustomizer() {
-				public Object addingService(ServiceReference reference) { return reference; }
+				public Object addingService(ServiceReference reference) { return context.getService(reference); }
 
 				public void modifiedService(ServiceReference reference, Object service) {}
 
 				public void removedService(ServiceReference reference, Object service) {}
 			};
-			ServiceTracker it = new ServiceTracker(runtime.getBundleContext(), cls.getName(), handler);
+			ServiceTracker it = new ServiceTracker(context, cls, handler);
 			it.open();
 			serviceTrackers.add(it);
-			return new ServiceProvider<M>(cls, it);
+			return new ServiceProvider(it);
 		} else {
 			return null;
 		}
@@ -55,7 +55,9 @@ public class OSGiRuntime {
 		if(!file.exists()) throw new FileNotFoundException("Could not find bundle file at " + file);
 		BundleContext context = runtime.getBundleContext();
 		if(context != null) {
-			return context.installBundle("file://" + file);
+			Bundle toReturn = context.installBundle("file://" + file);
+			toReturn.start();
+			return toReturn;
 		} else {
 			return null;
 		}

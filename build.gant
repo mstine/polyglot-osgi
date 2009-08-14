@@ -1,29 +1,31 @@
+def types = [
+	'main', 'shared', 
+	'java'
+]
+
 def dir = [:]
 dir.src = new File('.', 'src')
 dir.work = new File('.', 'working')
 dir.classes = new File(dir.work, 'classes')
 dir.lib = new File('.', 'lib')
-
-def types = [
-	'main', 'java', 'shared'
-]
 types.each {
 	dir["${it}Src"] = new File(dir.src, it)
 	dir["${it}Classes"] = new File(dir.classes, it)
 	dir["${it}Lib"] = new File(dir.lib, it)
 }
-
 dir.osgiLib = new File(dir.lib, 'osgi')
 dir.osgiImpl = new File(dir.osgiLib, 'felix/felix-1.8.0/bin')
 dir.osgiWork = new File(dir.osgiImpl, '..')
 dir.impls = new File(dir.work, 'impls')
-
 dir.each { k,v -> dir[k] = v.canonicalPath }
 
 def file = [:]
-
 file.osgiJar = new File(dir.osgiImpl, 'felix.jar')
-
+types.each {
+	file["${it}Manifest"] = new File(dir["${it}Src"], 'MANIFEST.MF')
+	file["${it}ImplJar"] = new File(dir.impls, "$it-impl.jar")
+}
+file.sharedImplJar = new File(dir.work, 'api.jar') // Overwrite: shouldn't be in impl dir
 file.each { k,v -> file[k] = v.canonicalPath }
 
 includeTargets << gant.targets.Clean
@@ -31,16 +33,42 @@ cleanDirectory << dir.work
 cleanDirectory << 'felix-cache'
 
 target(run:"Runs the driver") {
-	depends(init,compileDriver)
+	depends(init, compileDriver, compileShared, compileImpls)
 	java(classname:"eg.Driver", fork:true) {
 		classpath {
-			['sharedClasses', 'mainClasses'].each {
-				pathelement(location:dir[it])
-			}
-			['osgiLib', 'impls', 'mainLib'].each {
-				fileset(dir:dir[it], includes:'**/*.jar')
+			pathelement(location:dir.mainClasses)
+			fileset(dir:dir.osgiLib, includes:'**/*.jar')
+		}
+		arg(value:file.sharedImplJar)
+		new File(dir.impls).listFiles().each {
+			if(it.name.endsWith(".jar")) {
+				arg(value:it.canonicalPath)
 			}
 		}
+	}
+}
+
+target(compileImpls: 'Compiles all the implementations') {
+	depends(init)
+	depends(compileJava)
+}
+
+target(compileJava: 'Compiles the Java implementation') {
+	javac(srcDir:dir.javaSrc, destDir:dir.javaClasses) {
+		classpath {
+			['java', 'shared'].each {
+				pathelement(location:dir["${it}Classes"])
+			}
+			fileset(dir:dir.osgiLib, includes:'**/*.jar')
+		}
+	}
+	delete(file:file.javaImplJar, failOnError:false)
+	jar(
+		destFile:file.javaImplJar, 
+		manifest:file.javaManifest, whenmanifestonly:'fail', 
+		compress:true, level:9, index:true
+	) {
+		fileset(dir:dir.javaClasses)
 	}
 }
 
@@ -50,6 +78,12 @@ target(compileShared: 'Compiles the shared code (interface)') {
 		classpath {
 			fileset(dir:dir.osgiLib, includes:'**/*.jar')
 		}
+	}
+	jar(
+		destFile:file.sharedImplJar, manifest:file.sharedManifest, 
+		whenmanifestonly:'fail', compress:true, level:9, index:true
+	) {
+		fileset(dir:dir.sharedClasses)
 	}
 }
 

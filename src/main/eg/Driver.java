@@ -7,14 +7,15 @@ public class Driver {
 		OSGiRuntime osgi = null;
 		try {
 			osgi = new OSGiRuntime();
-			ServiceProvider<HelloWorld> servicesFactory = osgi.trackService(HelloWorld.class);
+			ServiceProvider servicesFactory = osgi.trackService("eg.api.HelloWorld");
 
 			for(String arg : args) {
+				System.out.println("Processing " + arg);
 				osgi.loadBundleFile(arg);
 			}
 
-			for(HelloWorld impl : servicesFactory.getServices()) {
-				impl.greet();
+			for(Object impl : servicesFactory.getServices()) {
+				impl.getClass().getMethod("greet").invoke(impl);
 			}
 			
 		} finally {
