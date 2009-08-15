@@ -1,0 +1,3 @@
+Export-Package: eg.impl.groovy16
+Import-Package: *
+Bundle-Activator: eg.impl.groovy16.Groovy16HelloWorldBundle

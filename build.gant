@@ -14,6 +14,7 @@ types.each {
 	dir["${it}Classes"] = new File(dir.classes, it)
 	dir["${it}Lib"] = new File(dir.lib, it)
 }
+dir.supportBundles = new File(dir.work, 'support')
 dir.osgiLib = new File(dir.lib, 'osgi')
 dir.osgiImpl = new File(dir.osgiLib, 'felix/felix-1.8.0/bin')
 dir.osgiWork = new File(dir.osgiImpl, '..')
@@ -24,40 +25,45 @@ def file = [:]
 file.osgiJar = new File(dir.osgiImpl, 'felix.jar')
 types.each {
 	file["${it}ImplJar"] = new File(dir.impls, "$it-impl.jar")
+	file["${it}Bnd"] = new File(dir["${it}Src"], "${it}.bnd")
 }
-file.sharedManifest = new File(dir.sharedSrc, 'MANIFEST.MF')
-file.sharedImplJar = new File(dir.work, 'api.jar') // Overwrite: shouldn't be in impl dir
+file.sharedImplJar = new File(dir.supportBundles, 'api.jar') // Overwrite: not an impl
+file.bndJar = new File(dir.lib, 'bnd-0.0.337.jar')
 file.each { k,v -> file[k] = v.canonicalPath }
 
 includeTargets << gant.targets.Clean
 cleanDirectory << dir.work
 cleanDirectory << 'felix-cache'
 
-target(initScala: "Steps to initialize Scala") {
-	ant.taskdef(resource:"scala/tools/ant/antlib.xml") {
+ant.taskdef(resource:"scala/tools/ant/antlib.xml") {
+	classpath {
+		fileset(dir:dir.scalaLib, includes:'*.jar')
+	}
+}
+
+types.findAll { it.startsWith("groovy") }.each { version ->
+	ant.taskdef(name:"${version}c", classname:'org.codehaus.groovy.ant.Groovyc') {
 		classpath {
-			fileset(dir:dir.scalaLib, includes:'**/*.jar')
+			fileset(dir:dir["${version}Lib"], includes:'groovy*.jar')
 		}
 	}
 }
 
-def initGroovy = { version ->
-	ant.taskdef(name:"${version}c", classname:'org.codehaus.groovy.ant.Groovyc') {
-		classpath {
-			fileset(dir:dir["${version}Lib"], includes:'**/*.jar')
-		}
-	}
-}
+ant.taskdef(resource:"aQute/bnd/ant/taskdef.properties", classpath:file.bndJar)
 
 target(run:"Runs the driver") {
 	depends(init, compileDriver, compileShared, compileImpls)
-	java(classname:"eg.Driver", fork:true) {
+	ant.java(classname:"eg.Driver", fork:true) {
 		classpath {
 			pathelement(location:dir.mainClasses)
 			fileset(dir:dir.osgiLib, includes:'**/*.jar')
 		}
-		arg(value:file.sharedImplJar)
-		new File(dir.impls).listFiles().each {
+		new File(dir.supportBundles).eachFileRecurse {
+			if(it.name.endsWith(".jar")) {
+				arg(value:it.canonicalPath)
+			}
+		}
+		new File(dir.impls).eachFileRecurse {
 			if(it.name.endsWith(".jar")) {
 				arg(value:it.canonicalPath)
 			}
@@ -68,42 +74,24 @@ target(run:"Runs the driver") {
 target(compileImpls: 'Compiles all the implementations') {
 	depends(init)
 	depends(compileJava)
+	depends(compileGroovy16)
 }
 
 def packageTemplate = { kind ->
-	ant."${kind}c"(srcDir:dir["${kind}Src"], destDir:dir["${kind}Classes"]) {
+	def srcDir = dir["${kind}Src"]
+	def clsDir = dir["${kind}Classes"]
+
+	ant."${kind}c"(srcDir:srcDir, destDir:clsDir) {
 		classpath {
 			pathelement(location:file.sharedImplJar)
 			fileset(dir:dir.osgiLib, includes:'**/*.jar')
 		}
 	}
 
-	def cp = ['.'] + (new File(dir["${kind}Lib"]).listFiles() ?: [])
-	def activatorClassName = kind[0].toUpperCase() + kind[1..-1] + "HelloWorldBundle"
+	ant.bnd(classpath:clsDir, eclipse:false, exceptions:false, failok:false, files:file["${kind}Bnd"])
 
-	def implJar = file["${kind}ImplJar"]
-	ant.delete(file:implJar, failOnError:false)
-	ant.jar(
-		destFile:implJar, 
-		whenManifestOnly:'fail', compress:true, level:9, index:true
-	) {
-		fileset(dir:dir["${kind}Classes"])
-		fileset(dir:dir["${kind}Lib"], includes:'**/*.jar')
-		manifest {
-			[
-				'Bundle-ManifestVersion': '2',
-				'Bundle-SymbolicName': "eg.impl.${kind}",
-				'Bundle-Vendor': 'Smokejumper IT Consulting',
-				'Bundle-Version': '1',
-				'Bundle-Activator': "eg.impl.${kind}.${activatorClassName}",
-				'Bundle-Classpath': cp.join(','),
-				'Import-Package': 'org.osgi.framework, eg.api, eg.api.osgi.helpers',
-				'Export-Package': "eg.impl.$kind"
-			].each { k,v -> 
-				attribute(name:k, value:v) 
-			}
-		}
-	}
+	ant.move(file:"${kind}.jar", toFile:file["${kind}ImplJar"], verbose:true)
+
 }
 
 target(compileJava: 'Compiles the Java implementation') {
@@ -113,14 +101,18 @@ target(compileJava: 'Compiles the Java implementation') {
 
 target(compileGroovy17: 'Compiles the Groovy 1.7 implementation') {
 	depends(init, compileShared)
-	doInitGroovy('groovy17')
-	packageTemplate('groovy17')
+	packageTemplate('groovy17') 
+	copy(toDir:dir.supportBundles) {
+		fileset(dir:dir.groovy17Lib, includes:'groovy*1.7*.jar') 
+	}
 }
 
 target(compileGroovy16: 'Compiles the Groovy 1.6 implementation') {
 	depends(init, compileShared)
-	doInitGroovy('groovy16')
 	packageTemplate('groovy16')
+	copy(toDir:dir.supportBundles) {
+		fileset(dir:dir.groovy16Lib, includes:'groovy*1.6*.jar') 
+	}
 }
 
 /*
@@ -151,12 +143,8 @@ target(compileShared: 'Compiles the shared code (interface)') {
 			fileset(dir:dir.osgiLib, includes:'**/*.jar')
 		}
 	}
-	jar(
-		destFile:file.sharedImplJar, manifest:file.sharedManifest, 
-		whenmanifestonly:'fail', compress:true, level:9, index:true
-	) {
-		fileset(dir:dir.sharedClasses)
-	}
+	bnd(classpath:dir.sharedClasses, eclipse:false, failok:false, files:file.sharedBnd)
+	move(file:'shared.jar', toFile:file.sharedImplJar, verbose:true)
 }
 
 target(compileDriver: 'Compiles the driver') {
