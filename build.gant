@@ -75,6 +75,7 @@ target(compileImpls: 'Compiles all the implementations') {
 	depends(init)
 	depends(compileJava)
 	depends(compileGroovy16)
+	depends(compileGroovy17)
 }
 
 def packageTemplate = { kind ->
@@ -114,27 +115,6 @@ target(compileGroovy16: 'Compiles the Groovy 1.6 implementation') {
 		fileset(dir:dir.groovy16Lib, includes:'groovy*1.6*.jar') 
 	}
 }
-
-/*
-target(compileJava: 'Compiles the Java implementation') {
-	javac(srcDir:dir.javaSrc, destDir:dir.javaClasses) {
-		classpath {
-			['java', 'shared'].each {
-				pathelement(location:dir["${it}Classes"])
-			}
-			fileset(dir:dir.osgiLib, includes:** /*.jar')
-		}
-	}
-	delete(file:file.javaImplJar, failOnError:false)
-	jar(
-		destFile:file.javaImplJar, 
-		manifest:file.javaManifest, whenmanifestonly:'fail', 
-		compress:true, level:9, index:true
-	) {
-		fileset(dir:dir.javaClasses)
-	}
-}
-*/
 
 target(compileShared: 'Compiles the shared code (interface)') {
 	depends(init)
