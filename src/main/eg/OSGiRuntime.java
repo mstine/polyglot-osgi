@@ -18,13 +18,17 @@ public class OSGiRuntime {
 	public OSGiRuntime() throws Exception {
 		Map config = new StringMap(false);
 		config.put(Constants.FRAMEWORK_SYSTEMPACKAGES,
+				"javax.swing,"+
+				"javax.swing.table,"+
+				"javax.swing.tree,"+
+				"org.w3c.dom," + 
+				"org.w3c.dom.bootstrap," + 
+				"org.w3c.dom.events," + 
+				"org.w3c.dom.ls," + 
         "org.osgi.framework; version=1.3.0," +
 				"org.osgi.service.packageadmin; version=1.2.0," +
 				"org.osgi.service.startlevel; version=1.0.0," +
 				"org.osgi.service.url; version=1.0.0");
-		config.put(AutoActivator.AUTO_START_PROP + ".1",
-				"file:bundle/org.apache.felix.shell-1.0.0.jar " +
-				"file:bundle/org.apache.felix.shell.tui-1.0.0.jar");
 		config.put("felix.embedded.execution", "true");
 
 		runtime = new Felix(config);
@@ -51,6 +55,10 @@ public class OSGiRuntime {
 	}
 
 	public Bundle loadBundleFile(String location) throws Exception {
+		// BEGIN DEBUG CODE
+		assert(runtime.loadClass("org.w3c.dom.NodeList") != null);
+		// END DEBUG CODE
+
 		File file = new File(location).getCanonicalFile();
 		if(!file.exists()) throw new FileNotFoundException("Could not find bundle file at " + file);
 		BundleContext context = runtime.getBundleContext();
