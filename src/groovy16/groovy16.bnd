@@ -1,3 +1,6 @@
 Export-Package: eg.impl.groovy16
-Import-Package: *
+Import-Package: \
+	groovy.*;version="[1.6,1.7)", \
+	org.codehaus.groovy.*;version="[1.6,1.7)", \
+	*
 Bundle-Activator: eg.impl.groovy16.Groovy16HelloWorldBundle
