@@ -1,4 +1,4 @@
-package eg.api.osgi.helpers;
+package eg.osgi.helpers;
 
 import eg.api.*;
 import org.osgi.framework.*;
@@ -8,8 +8,6 @@ import java.util.*;
 
 public abstract class HelloWorldBundle implements BundleActivator {
 
-	private static final String KEY = HelloWorld.class.getName();
-
 	private ServiceRegistration registration;
 
 	protected abstract HelloWorld getHelloWorld();
@@ -17,9 +15,8 @@ public abstract class HelloWorldBundle implements BundleActivator {
 	public void start(BundleContext context) throws Exception {
 		HelloWorld impl = getHelloWorld();
 		System.out.println("Registering the implementation from " + impl.getClass());
-		registration = context.registerService(KEY, impl, null);
+		registration = context.registerService(HelloWorld.class.getName(), impl, null);
 	}
-
 
 	public void stop(BundleContext context) throws Exception {
 		if(registration != null) {
@@ -27,6 +24,5 @@ public abstract class HelloWorldBundle implements BundleActivator {
 			registration = null;
 		}
 	}
-	
 
 }

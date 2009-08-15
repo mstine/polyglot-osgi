@@ -1,11 +1,11 @@
 package eg.impl.groovy16;
 
 import eg.api.*;
-import eg.api.osgi.helpers.*;
+import eg.osgi.helpers.*;
 
 class Groovy16HelloWorldBundle extends HelloWorldBundle {
 
-	HelloWorld helloWorld = new Groovy16HelloWorld()
+	HelloWorld getHelloWorld() { new Groovy16HelloWorld() }
   
 }
 
