@@ -1,20 +1,42 @@
 package eg;
 
+import org.osgi.framework.*;
 import org.osgi.util.tracker.ServiceTracker;
+import org.osgi.util.tracker.ServiceTrackerCustomizer;
 import java.util.*;
 
-public class ServiceProvider {
+public class ServiceProvider<M> {
 
-	private final ServiceTracker tracker;
+	final ServiceTracker tracker;
+	private final Class<M> cls;
 
-	public ServiceProvider(ServiceTracker tracker) {
-		this.tracker = tracker;
+	public ServiceProvider(final BundleContext context, Class<M> toProvide) {
+		this.cls = toProvide;
+		this.tracker = new ServiceTracker(context, toProvide.getName(), new ServiceTrackerCustomizer() {
+        public Object addingService(ServiceReference reference) { 
+					return context.getService(reference); 
+				}
+        public void modifiedService(ServiceReference reference, Object service) {}
+        public void removedService(ServiceReference reference, Object service) {}
+		});
+		this.tracker.open();
 	}
 
-	public Object[] getServices() {
+	public List<M> getServices() {
 		Object[] services = tracker.getServices();
-		if(services == null) return new Object[0];
-		return services;
+		if(services == null) return new ArrayList<M>(0);
+		final List<M> toReturn = new ArrayList<M>(services.length); 
+		for(Object service : services) {
+			if(!cls.isInstance(service)) {
+				throw new ClassCastException("Cannot cast " + service.getClass() + " to " + cls);
+			}
+			toReturn.add((M)service); // Type erasure prevents this from throwing an exception
+		}
+		return toReturn;
+	}
+
+	public void close() {
+		tracker.close();
 	}
 
 }

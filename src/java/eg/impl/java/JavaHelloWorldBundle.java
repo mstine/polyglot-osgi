@@ -1,7 +1,7 @@
 package eg.impl.java;
 
-import eg.api.*;
-import eg.osgi.helpers.*;
+import eg.api.HelloWorld;
+import eg.osgi.helpers.HelloWorldBundle;
 
 public class JavaHelloWorldBundle extends HelloWorldBundle {
 

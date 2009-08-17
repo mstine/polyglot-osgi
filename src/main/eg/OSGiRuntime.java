@@ -13,52 +13,60 @@ import java.util.*;
 public class OSGiRuntime {
 
 	private final Felix runtime;
-	private final List<ServiceTracker> serviceTrackers = new ArrayList<ServiceTracker>(8);
+	private final List<ServiceProvider> providers = new ArrayList<ServiceProvider>(8);
 
-	public OSGiRuntime() throws Exception {
+	private static String buildPackages(String[]... packages) {
+		StringBuilder builder = new StringBuilder();
+		for(String[] pkgs : packages) {
+			for(String pkg : pkgs) {
+				builder.append(pkg);
+				builder.append(',');
+			}
+		}
+		builder.setLength(builder.length()-1); // remove trailing comma
+		return builder.toString();
+	}
+
+	public OSGiRuntime(String... userPackages) throws Exception {
+		String[] jvmPackages = new String[] {
+			"javax.swing",
+			"javax.swing.table",
+			"javax.swing.tree",
+			"org.w3c.dom",
+			"org.w3c.dom.bootstrap",
+			"org.w3c.dom.events",
+			"org.w3c.dom.ls"
+		};
+
+		String[] osgiPackages = new String[] {
+			"org.osgi.framework; version=1.3.0",
+			"org.osgi.service.packageadmin; version=1.2.0",
+			"org.osgi.service.startlevel; version=1.0.0",
+			"org.osgi.service.url; version=1.0.0"
+		};
+	
 		Map config = new StringMap(false);
 		config.put(Constants.FRAMEWORK_SYSTEMPACKAGES,
-				"javax.swing,"+
-				"javax.swing.table,"+
-				"javax.swing.tree,"+
-				"org.w3c.dom," + 
-				"org.w3c.dom.bootstrap," + 
-				"org.w3c.dom.events," + 
-				"org.w3c.dom.ls," + 
-        "org.osgi.framework; version=1.3.0," +
-				"org.osgi.service.packageadmin; version=1.2.0," +
-				"org.osgi.service.startlevel; version=1.0.0," +
-				"org.osgi.service.url; version=1.0.0");
+			buildPackages(userPackages, jvmPackages, osgiPackages)
+		);
 		config.put("felix.embedded.execution", "true");
 
 		runtime = new Felix(config);
 		runtime.start();
 	}
 
-	public ServiceProvider trackService(String cls) {
+	public <M> ServiceProvider<M> trackService(Class<M> cls) {
 		final BundleContext context = runtime.getBundleContext();
 		if(context != null) {
-			ServiceTrackerCustomizer handler = new ServiceTrackerCustomizer() {
-				public Object addingService(ServiceReference reference) { return context.getService(reference); }
-
-				public void modifiedService(ServiceReference reference, Object service) {}
-
-				public void removedService(ServiceReference reference, Object service) {}
-			};
-			ServiceTracker it = new ServiceTracker(context, cls, handler);
-			it.open();
-			serviceTrackers.add(it);
-			return new ServiceProvider(it);
+			ServiceProvider<M> it = new ServiceProvider<M>(context, cls);
+			providers.add(it);
+			return it;
 		} else {
 			return null;
 		}
 	}
 
 	public Bundle loadBundleFile(String location) throws Exception {
-		// BEGIN DEBUG CODE
-		assert(runtime.loadClass("org.w3c.dom.NodeList") != null);
-		// END DEBUG CODE
-
 		File file = new File(location).getCanonicalFile();
 		if(!file.exists()) throw new FileNotFoundException("Could not find bundle file at " + file);
 		BundleContext context = runtime.getBundleContext();
@@ -72,7 +80,7 @@ public class OSGiRuntime {
 	}
 
 	public void stop() throws Exception {
-		for(ServiceTracker it : serviceTrackers) {
+		for(ServiceProvider it : providers) {
 			it.close();
 		}
 		runtime.stop();

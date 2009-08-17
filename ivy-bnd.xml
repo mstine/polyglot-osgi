@@ -1,0 +1,16 @@
+<ivysettings>
+	<resolvers>
+		<chain name="bnd-resolver" returnFirst="true">
+			<filesystem name="local-cache">
+				<artifact pattern="${user.home}/.ivy2/cache/[organisation]/[module]/[type]s/[artifact]-[revision].[ext]" />
+			</filesystem>
+			<url name="aQute-as-web-site">
+				<artifact pattern="http://www.aqute.biz/repo/biz/[organisation]/[module]/[revision]/[module]-[revision].[ext]" />
+			</url>
+		</chain>
+	</resolvers>
+	<modules>
+		<module resolver="bnd-resolver" />
+	</modules>
+</ivysettings>
+

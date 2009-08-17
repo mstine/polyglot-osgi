@@ -1,7 +1,7 @@
 def types = [
-	'main', 'shared', 
-	'java', 'scala', 'jruby',
-	'groovy17', 'groovy16'
+	'main', 
+	'java', 'groovy17', 'groovy16',
+	'clojure', 'scala'
 ]
 
 def dir = [:]
@@ -27,13 +27,20 @@ types.each {
 	file["${it}ImplJar"] = new File(dir.impls, "$it-impl.jar")
 	file["${it}Bnd"] = new File(dir["${it}Src"], "${it}.bnd")
 }
-file.sharedImplJar = new File(dir.supportBundles, 'api.jar') // Overwrite: not an impl
-file.bndJar = new File(dir.lib, 'bnd-0.0.337.jar')
+file.bndIvy = new File('.', 'ivy-bnd.xml')
 file.each { k,v -> file[k] = v.canonicalPath }
 
 includeTargets << gant.targets.Clean
 cleanDirectory << dir.work
 cleanDirectory << 'felix-cache'
+
+includeTool << gant.tools.Ivy
+
+ant.taskdef(name:'clojureCompile', classname:'com.ubermensch.ant.clojure.CompileTask') {
+	classpath {
+		fileset(dir:dir.clojureLib, includes:'*.jar')
+	}
+}
 
 ant.taskdef(resource:"scala/tools/ant/antlib.xml") {
 	classpath {
@@ -49,10 +56,8 @@ types.findAll { it.startsWith("groovy") }.each { version ->
 	}
 }
 
-ant.taskdef(resource:"aQute/bnd/ant/taskdef.properties", classpath:file.bndJar)
-
 target(run:"Runs the driver") {
-	depends(init, compileDriver, compileShared, compileImpls)
+	depends(init, compileMain, compileImpls)
 	ant.java(classname:"eg.Driver", fork:true) {
 		classpath {
 			pathelement(location:dir.mainClasses)
@@ -76,6 +81,20 @@ target(compileImpls: 'Compiles all the implementations') {
 	depends(compileJava)
 	depends(compileGroovy16)
 	depends(compileGroovy17)
+	//depends(compileClojure)
+}
+
+target(compileClojure: 'Compiles the Clojure implementation') {
+	depends(init, compileMain)
+	clojureCompile {
+		classpath {
+			pathelement(location:dir.clojureSrc)
+			pathelement(location:dir.clojureClasses)
+			pathelement(location:dir.mainClasses)
+		}
+		namespace('eg.impl.clojure.ClojureHelloWorld')
+		namespace('eg.impl.clojure.ClojureHelloWorldBundle')
+	}
 }
 
 def packageTemplate = { kind ->
@@ -84,8 +103,19 @@ def packageTemplate = { kind ->
 
 	ant."${kind}c"(srcDir:srcDir, destDir:clsDir) {
 		classpath {
-			pathelement(location:file.sharedImplJar)
 			fileset(dir:dir.osgiLib, includes:'**/*.jar')
+			pathelement(location:dir.mainClasses)
+		}
+	}
+
+	def bndFile = new File(file["${kind}Bnd"])
+	if(!bndFile.exists()) {
+		bndFile.withWriter { w ->
+			w << """
+Export-Package: eg.impl.$kind
+Import-Package: *
+Bundle-Activator: eg.impl.${kind}.${kind[0].toUpperCase()}${kind[1,-1]}HelloWorldBundle
+"""
 		}
 	}
 
@@ -96,12 +126,12 @@ def packageTemplate = { kind ->
 }
 
 target(compileJava: 'Compiles the Java implementation') {
-	depends(init, compileShared)
+	depends(init, compileMain)
 	packageTemplate('java')
 }
 
 target(compileGroovy17: 'Compiles the Groovy 1.7 implementation') {
-	depends(init, compileShared)
+	depends(init, compileMain)
 	packageTemplate('groovy17') 
 	copy(toDir:dir.supportBundles) {
 		fileset(dir:dir.groovy17Lib, includes:'groovy*1.7*.jar') 
@@ -109,32 +139,21 @@ target(compileGroovy17: 'Compiles the Groovy 1.7 implementation') {
 }
 
 target(compileGroovy16: 'Compiles the Groovy 1.6 implementation') {
-	depends(init, compileShared)
+	depends(init, compileMain)
 	packageTemplate('groovy16')
 	copy(toDir:dir.supportBundles) {
 		fileset(dir:dir.groovy16Lib, includes:'groovy*1.6*.jar') 
 	}
 }
 
-target(compileShared: 'Compiles the shared code (interface)') {
+target(compileMain: 'Compiles the main code (driver, api)') {
 	depends(init)
-	javac(srcDir:dir.sharedSrc, destDir:dir.sharedClasses) {
+	javac(
+		srcdir:dir.mainSrc, destDir:dir.mainClasses, 
+		debug:true, debugLevel:'source,lines,vars'
+	) {
 		classpath {
 			fileset(dir:dir.osgiLib, includes:'**/*.jar')
-		}
-	}
-	bnd(classpath:dir.sharedClasses, eclipse:false, failok:false, files:file.sharedBnd)
-	move(file:'shared.jar', toFile:file.sharedImplJar, verbose:true)
-}
-
-target(compileDriver: 'Compiles the driver') {
-	depends(init, compileShared)
-	javac(srcdir:dir.mainSrc, destDir:dir.mainClasses) {
-		classpath {
-			pathelement(location:dir.sharedClasses)
-			['osgi', 'main',].each {
-				fileset(dir:dir["${it}Lib"], includes:'**/*.jar')
-			}
 		}
 	}
 }
@@ -143,7 +162,11 @@ target(init: 'Initializes the build') {
 	dir.each { k,v ->
 		mkdir(dir:v)
 	}
-	
+
+	// Fetch and install bnd
+	ivy.settings(id:'bnd.settings', file:file.bndIvy)
+	ivy.cachepath(pathId:'bnd.path', inline:true, organisation:'aQute', module:'bnd', keep:true, settingsRef:'bnd.settings')
+	ant.taskdef(resource:"aQute/bnd/ant/taskdef.properties", classpathRef:'bnd.path')
 }
 
 setDefaultTarget(run)

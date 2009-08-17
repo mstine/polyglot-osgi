@@ -1,10 +1,8 @@
 package eg.osgi.helpers;
 
-import eg.api.*;
+import eg.api.HelloWorld;
 import org.osgi.framework.*;
 import org.apache.felix.framework.util.StringMap;
-
-import java.util.*;
 
 public abstract class HelloWorldBundle implements BundleActivator {
 

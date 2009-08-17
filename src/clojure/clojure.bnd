@@ -1,0 +1,3 @@
+Export-Package: eg.impl.clojure
+Import-Package: *
+Bundle-Activator: eg.impl.clojure.ClojureHelloWorldBundle
