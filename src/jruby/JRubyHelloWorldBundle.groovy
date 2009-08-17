@@ -18,7 +18,7 @@ class JRubyHelloWorldBundle extends HelloWorldBundle {
 				include Java::eg.api.HelloWorld
 		
 				def greet
-					puts "Hello, World! (From JRuby)"
+					puts "Hello, World! (From #{self.class})"
 				end
 			end
 			
