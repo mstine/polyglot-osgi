@@ -1,7 +1,7 @@
 def types = [
 	'main', 
 	'java', 'groovy17', 'groovy16',
-	'clojure', 'scala'
+	'clojure', 'scala', 'jruby'
 ]
 
 def dir = [:]
@@ -56,8 +56,18 @@ types.findAll { it.startsWith("groovy") }.each { version ->
 	}
 }
 
+// Until JRuby has a true compiler
+ant.taskdef(name:"jrubyc", classname:'org.codehaus.groovy.ant.Groovyc') {
+	classpath {
+		fileset(dir:dir.groovy17Lib, includes:'groovy*.jar')
+	}
+}
+
 target(run:"Runs the driver") {
-	depends(init, compileMain, compileImpls)
+	clean()
+	init()
+	compileMain()
+	compileImpls()
 	ant.java(classname:"eg.Driver", fork:true) {
 		classpath {
 			pathelement(location:dir.mainClasses)
@@ -82,6 +92,47 @@ target(compileImpls: 'Compiles all the implementations') {
 	depends(compileGroovy16)
 	depends(compileGroovy17)
 	//depends(compileClojure)
+	//depends(compileJRuby)
+}
+
+def packageTemplate = { kind ->
+	def srcDir = dir["${kind}Src"]
+	def clsDir = dir["${kind}Classes"]
+
+	ant."${kind}c"(srcDir:srcDir, destDir:clsDir) {
+		classpath {
+			fileset(dir:dir["${kind}Lib"], includes:'**/*.jar')
+			fileset(dir:dir.osgiLib, includes:'**/*.jar')
+			pathelement(location:dir.mainClasses)
+		}
+	}
+
+	def bndFile = new File(file["${kind}Bnd"])
+	if(!bndFile.exists()) {
+		bndFile.withWriter { w ->
+			w << """
+Export-Package: eg.impl.$kind
+Import-Package: *
+Bundle-Activator: eg.impl.${kind}.${kind[0].toUpperCase()}${kind[1,-1]}HelloWorldBundle
+""".trim()
+		}
+	}
+
+	ant.bnd(classpath:clsDir, eclipse:false, exceptions:false, failok:false, files:file["${kind}Bnd"])
+
+	ant.move(file:"${kind}.jar", toFile:file["${kind}ImplJar"], verbose:true)
+
+}
+
+target(compileJRuby: 'Compiles the JRuby implementation') {
+	if(System.properties['java.version'].startsWith("1.5")) {
+		fail(message:"JRuby uses scripting framework, which was introduced in 1.6", status:15)
+	}
+	depends(init, compileMain)
+	packageTemplate('jruby')
+	copy(toDir:dir.supportBundles) {
+		fileset(dir:dir.jrubyLib, includes:'jruby-complete*.jar') 
+	}
 }
 
 target(compileClojure: 'Compiles the Clojure implementation') {
@@ -95,34 +146,6 @@ target(compileClojure: 'Compiles the Clojure implementation') {
 		namespace('eg.impl.clojure.ClojureHelloWorld')
 		namespace('eg.impl.clojure.ClojureHelloWorldBundle')
 	}
-}
-
-def packageTemplate = { kind ->
-	def srcDir = dir["${kind}Src"]
-	def clsDir = dir["${kind}Classes"]
-
-	ant."${kind}c"(srcDir:srcDir, destDir:clsDir) {
-		classpath {
-			fileset(dir:dir.osgiLib, includes:'**/*.jar')
-			pathelement(location:dir.mainClasses)
-		}
-	}
-
-	def bndFile = new File(file["${kind}Bnd"])
-	if(!bndFile.exists()) {
-		bndFile.withWriter { w ->
-			w << """
-Export-Package: eg.impl.$kind
-Import-Package: *
-Bundle-Activator: eg.impl.${kind}.${kind[0].toUpperCase()}${kind[1,-1]}HelloWorldBundle
-"""
-		}
-	}
-
-	ant.bnd(classpath:clsDir, eclipse:false, exceptions:false, failok:false, files:file["${kind}Bnd"])
-
-	ant.move(file:"${kind}.jar", toFile:file["${kind}ImplJar"], verbose:true)
-
 }
 
 target(compileJava: 'Compiles the Java implementation') {
