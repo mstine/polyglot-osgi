@@ -111,6 +111,7 @@ def packageTemplate = { kind ->
 
 	def bndFile = new File(file["${kind}Bnd"])
 	if(!bndFile.exists()) {
+		echo(message:"Generating ${bndFile}")
 		bndFile.withWriter { w ->
 			w << """
 Export-Package: eg.impl.$kind
