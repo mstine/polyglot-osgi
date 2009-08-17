@@ -72,6 +72,7 @@ target(run:"Runs the driver") {
 		classpath {
 			pathelement(location:dir.mainClasses)
 			fileset(dir:dir.osgiLib, includes:'**/*.jar')
+			fileset(dir:dir.jrubyLib, includes:'**/*.jar')
 		}
 		new File(dir.supportBundles).eachFileRecurse {
 			if(it.name.endsWith(".jar")) {
@@ -92,7 +93,8 @@ target(compileImpls: 'Compiles all the implementations') {
 	depends(compileGroovy16)
 	depends(compileGroovy17)
 	//depends(compileClojure)
-	//depends(compileJRuby)
+	depends(compileJRuby)
+	//depends(compileScala)
 }
 
 def packageTemplate = { kind ->
@@ -130,13 +132,16 @@ target(compileJRuby: 'Compiles the JRuby implementation') {
 	}
 	depends(init, compileMain)
 	packageTemplate('jruby')
+/*
 	copy(toDir:dir.supportBundles) {
 		fileset(dir:dir.jrubyLib, includes:'jruby-complete*.jar') 
 	}
+*/
 }
 
 target(compileClojure: 'Compiles the Clojure implementation') {
 	depends(init, compileMain)
+	echo(message:"SRC[$dir.clojureSrc] CLASSES[$dir.clojureClasses]")
 	clojureCompile {
 		classpath {
 			pathelement(location:dir.clojureSrc)
@@ -144,7 +149,7 @@ target(compileClojure: 'Compiles the Clojure implementation') {
 			pathelement(location:dir.mainClasses)
 		}
 		namespace('eg.impl.clojure.ClojureHelloWorld')
-		namespace('eg.impl.clojure.ClojureHelloWorldBundle')
+		//namespace('eg.impl.clojure.ClojureHelloWorldBundle')
 	}
 }
 

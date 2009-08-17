@@ -29,13 +29,31 @@ public class OSGiRuntime {
 
 	public OSGiRuntime(String... userPackages) throws Exception {
 		String[] jvmPackages = new String[] {
+			"javax.jms",
+			"javax.mail",
+			"javax.mail.internet",
+			"javax.naming",
+			"javax.script",
 			"javax.swing",
+			"javax.swing.border",
+			"javax.swing.event",
+			"javax.swing.filechooser",
+			"javax.swing.plaf.basic",
 			"javax.swing.table",
+			"javax.swing.text",
 			"javax.swing.tree",
+			"javax.xml.namespace",
+			"javax.xml.parsers",
+			"javax.xml.transform",
+			"javax.xml.transform.dom",
+			"javax.xml.transform.stream",
 			"org.w3c.dom",
 			"org.w3c.dom.bootstrap",
 			"org.w3c.dom.events",
-			"org.w3c.dom.ls"
+			"org.w3c.dom.ls",
+			"org.xml.sax",
+			"org.xml.sax.ext",
+			"org.xml.sax.helpers"
 		};
 
 		String[] osgiPackages = new String[] {
