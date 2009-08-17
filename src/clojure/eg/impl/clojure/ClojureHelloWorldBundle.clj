@@ -4,7 +4,7 @@
 	)
 )
 
-(defn getHelloWorld [this]
+(defn -getHelloWorld [this]
 	(new eg.impl.clojure.ClojureHelloWorld)
 )
 

@@ -3,8 +3,5 @@
 	)
 )
 
-(defn greet [this]
-	(println (
-		"Hello, World! " (str (class this))
-	))
-)
+(defn -greet [this]
+	(println "Hello, World!" (str (class this))))
