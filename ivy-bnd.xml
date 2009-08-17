@@ -1,12 +1,10 @@
 <ivysettings>
 	<resolvers>
 		<chain name="bnd-resolver" returnFirst="true">
-			<filesystem name="local-cache">
+			<filesystem name="local-cache"><!-- Default local cache -->
 				<artifact pattern="${user.home}/.ivy2/cache/[organisation]/[module]/[type]s/[artifact]-[revision].[ext]" />
 			</filesystem>
-			<url name="aQute-as-web-site">
-				<artifact pattern="http://www.aqute.biz/repo/biz/[organisation]/[module]/[revision]/[module]-[revision].[ext]" />
-			</url>
+			<ibiblio name="aQute-as-mvn-repo" m2compatible="true" root="http://www.aqute.biz/repo" />
 		</chain>
 	</resolvers>
 	<modules>

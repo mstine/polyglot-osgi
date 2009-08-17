@@ -194,7 +194,7 @@ target(init: 'Initializes the build') {
 
 	// Fetch and install bnd
 	ivy.settings(id:'bnd.settings', file:file.bndIvy)
-	ivy.cachepath(pathId:'bnd.path', inline:true, organisation:'aQute', module:'bnd', keep:true, settingsRef:'bnd.settings')
+	ivy.cachepath(pathId:'bnd.path', inline:true, organisation:'biz.aQute', module:'bnd', keep:true, settingsRef:'bnd.settings')
 	ant.taskdef(resource:"aQute/bnd/ant/taskdef.properties", classpathRef:'bnd.path')
 }
 
