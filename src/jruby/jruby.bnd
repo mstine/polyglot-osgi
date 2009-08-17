@@ -1,12 +1,7 @@
 Include-Resource: \
-	../../lib/jruby/jruby-complete.jar,\
-	../../lib/jruby/jruby-embed.jar,\
-	../../lib/jruby/redbridge-0.0.1.jar,\
-	../../lib/jruby/bsf.jar,\
-	../../lib/jruby/commons-logging-1.1.1.jar,\
-	../../lib/jruby/log4j-1.2.15.jar,\
-	../../lib/jruby/NetRexxC.jar,\
-	../../lib/jruby/js.jar
+	@../../lib/jruby/jruby-complete.jar,\
+	@../../lib/jruby/jruby-embed.jar,\
+	@../../lib/jruby/redbridge-0.0.1.jar
 Import-Package: *,javax.script,\
 	org.apache.log;resolution:=optional,\
 	org.apache.xmlbeans;resolution:=optional,\
@@ -25,15 +20,8 @@ Import-Package: *,javax.script,\
 	com.sun.mirror.declaration;resolution:=optional,\
 	com.sun.mirror.type;resolution:=optional,\
 	com.sun.mirror.util;resolution:=optional,\
-	org.apache.avalon.framework.logger;resolution:=optional
+	org.apache.avalon.framework.logger;resolution:=optional,\
+  org.apache.bsf;resolution:=optional,\
+  org.apache.bsf.util;resolution:=optional
 Export-Package: eg.impl.jruby
 Bundle-Activator: eg.impl.jruby.JRubyHelloWorldBundle
-Bundle-ClassPath: .,\
-	jruby-complete.jar,\
-	jruby-embed.jar,\
-	redbridge-0.0.1.jar,\
-	bsf.jar,\
-	commons-logging-1.1.1.jar,\
-	log4j-1.2.15.jar,\
-	NetRexxC.jar,\
-	js.jar
