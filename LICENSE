@@ -1,4 +1,3 @@
-/*
 This file is part of Polyglot-OSGi.
 
 Polyglot-OSGi is free software: you can redistribute it and/or modify
@@ -13,15 +12,3 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with Polyglot-OSGi.  If not, see <http://www.gnu.org/licenses/>.
-*/
-package eg.impl.groovy17;
-
-import eg.api.*;
-import eg.osgi.helpers.*;
-import org.osgi.framework.*;
-
-class Groovy17HelloWorldBundle extends HelloWorldBundle {
-
-	HelloWorld helloWorld = new Groovy17HelloWorld() 
-
-}
