@@ -1,0 +1,4 @@
+Export-Package: eg.impl.scala
+Import-Package: *
+Bundle-Activator: eg.impl.scala.ScalaHelloWorldBundle
+Include-Resource: @../../lib/scala/scala-library.jar

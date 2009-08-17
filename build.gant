@@ -64,10 +64,7 @@ ant.taskdef(name:"jrubyc", classname:'org.codehaus.groovy.ant.Groovyc') {
 }
 
 target(run:"Runs the driver") {
-	clean()
-	init()
-	compileMain()
-	compileImpls()
+	depends(init, compileMain, compileImpls)
 	ant.java(classname:"eg.Driver", fork:true) {
 		classpath {
 			pathelement(location:dir.mainClasses)
@@ -92,9 +89,9 @@ target(compileImpls: 'Compiles all the implementations') {
 	depends(compileJava)
 	depends(compileGroovy16)
 	depends(compileGroovy17)
-	//depends(compileClojure)
+	depends(compileClojure)
 	depends(compileJRuby)
-	//depends(compileScala)
+	depends(compileScala)
 }
 
 def packageTemplate = { kind ->
@@ -111,7 +108,7 @@ def packageTemplate = { kind ->
 
 	def bndFile = new File(file["${kind}Bnd"])
 	if(!bndFile.exists()) {
-		echo(message:"Generating ${bndFile}")
+		ant.echo(message:"Generating ${bndFile}")
 		bndFile.withWriter { w ->
 			w << """
 Export-Package: eg.impl.$kind
@@ -127,30 +124,31 @@ Bundle-Activator: eg.impl.${kind}.${kind[0].toUpperCase()}${kind[1,-1]}HelloWorl
 
 }
 
+target(compileScala: 'Compiles the Scala implementation') {
+	depends(init, compileMain) 
+	packageTemplate('scala')
+}
+
 target(compileJRuby: 'Compiles the JRuby implementation') {
 	if(System.properties['java.version'].startsWith("1.5")) {
 		fail(message:"JRuby uses scripting framework, which was introduced in 1.6", status:15)
 	}
 	depends(init, compileMain)
 	packageTemplate('jruby')
-/*
-	copy(toDir:dir.supportBundles) {
-		fileset(dir:dir.jrubyLib, includes:'jruby-complete*.jar') 
-	}
-*/
 }
 
 target(compileClojure: 'Compiles the Clojure implementation') {
 	depends(init, compileMain)
 	echo(message:"SRC[$dir.clojureSrc] CLASSES[$dir.clojureClasses]")
-	clojureCompile {
+	clojureCompile(compilePath:dir.clojureClasses) {
 		classpath {
 			pathelement(location:dir.clojureSrc)
 			pathelement(location:dir.clojureClasses)
 			pathelement(location:dir.mainClasses)
+			fileset(dir:dir.osgiLib, includes:'**/*.jar')
 		}
 		namespace('eg.impl.clojure.ClojureHelloWorld')
-		//namespace('eg.impl.clojure.ClojureHelloWorldBundle')
+		namespace('eg.impl.clojure.ClojureHelloWorldBundle')
 	}
 }
 
