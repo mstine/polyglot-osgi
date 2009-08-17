@@ -150,6 +150,8 @@ target(compileClojure: 'Compiles the Clojure implementation') {
 		namespace('eg.impl.clojure.ClojureHelloWorld')
 		namespace('eg.impl.clojure.ClojureHelloWorldBundle')
 	}
+  bnd(classpath:dir.clojureClasses, eclipse:false, exceptions:false, failok:false, files:file.clojureBnd)
+  move(file:"clojure.jar", toFile:file.clojureImplJar, verbose:true)
 }
 
 target(compileJava: 'Compiles the Java implementation') {

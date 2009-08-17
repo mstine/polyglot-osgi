@@ -1,3 +1,4 @@
 Export-Package: eg.impl.clojure
 Import-Package: *
 Bundle-Activator: eg.impl.clojure.ClojureHelloWorldBundle
+Include-Resource: @../../lib/clojure/clojure-1.0.0.jar
