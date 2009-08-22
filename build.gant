@@ -1,8 +1,7 @@
 def types = [
 	'main', 
 	'java', 'groovy17', 'groovy16',
-	'clojure', 'scala', 'jruby',
-	'jython'
+	'clojure', 'scala', 'jruby'
 ]
 
 def dir = [:]
@@ -22,8 +21,6 @@ dir.osgiWork = new File(dir.osgiImpl, '..')
 dir.impls = new File(dir.work, 'impls')
 dir.each { k,v -> dir[k] = v.canonicalPath }
 
-dir.pythonHome = System.properties['python.home'] ?: '/Users/robert/dev/jython-2.5.0'
-
 def file = [:]
 file.osgiJar = new File(dir.osgiImpl, 'felix.jar')
 types.each {
@@ -38,12 +35,6 @@ cleanDirectory << dir.work
 cleanDirectory << 'felix-cache'
 
 includeTool << gant.tools.Ivy
-
-ant.taskdef(name:'jythonc', classname:'org.python.util.JythoncAntTask') {
-	classpath {
-		fileset(dir:dir.jythonLib, includes:'*.jar')
-	}
-}
 
 ant.taskdef(name:'clojureCompile', classname:'com.ubermensch.ant.clojure.CompileTask') {
 	classpath {
@@ -101,7 +92,6 @@ target(compileImpls: 'Compiles all the implementations') {
 	depends(compileClojure)
 	depends(compileJRuby)
 	depends(compileScala)
-//	depends(compileJython)
 }
 
 def packageTemplate = { kind ->
@@ -132,20 +122,6 @@ Bundle-Activator: eg.impl.${kind}.${kind[0].toUpperCase()}${kind[1,-1]}HelloWorl
 
 	ant.move(file:"${kind}.jar", toFile:file["${kind}ImplJar"], verbose:true)
 
-}
-
-target(compileJython: "Compiles the Jython implementation") {
-	depends(init, compileMain)
-	
-	property(name:'python.home', value:dir.pythonHome)
-	jythonc(all:true, package:'eg.impl.jython',
-		srcDir:dir.jythonSrc, destDir:dir.jythonClasses) {
-		classpath {
-			pathelement(location:dir.mainClasses)
-		}
-	}
-	bnd(classpath:dir.jythonClasses, eclipse: false, exceptions: false, failok:false, files:file.jythonBnd)
-	ant.move(file:'jython.jar', toFile:file.jythonImpljar, verbose:true)
 }
 
 target(compileScala: 'Compiles the Scala implementation') {
